@@ -10,6 +10,10 @@ from app.ai.financial_advisor import (
     generate_financial_advice
 )
 
+from app.services.n8n_service import (
+    send_n8n_alert
+)
+
 router = APIRouter()
 
 transactions_collection = db["transactions"]
@@ -47,6 +51,33 @@ async def create_transaction(
             transactions_collection
             .insert_one(new_transaction)
         )
+
+        await send_n8n_alert({
+
+            "event":
+                "transaction_created",
+
+            "user_email":
+                transaction.user_email,
+
+            "type":
+                transaction.type,
+
+            "category":
+                transaction.category,
+
+            "amount":
+                transaction.amount,
+
+            "description":
+                transaction.description,
+
+            "created_at":
+                str(transaction.created_at),
+
+            "transaction_id":
+                str(result.inserted_id)
+        })
 
         return {
 
@@ -170,6 +201,7 @@ async def financial_advice(
         )
 
         income = 0
+
         expenses = 0
 
         async for tx in transactions_cursor:
@@ -185,6 +217,7 @@ async def financial_advice(
         advice = generate_financial_advice(
 
             income,
+
             expenses
         )
 

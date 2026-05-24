@@ -238,7 +238,7 @@ async def forgot_password(
 
     reset_link = f"""
 
-reset_link = f"http://10.0.9.132:3000/reset-password?token={token}"
+reset_link = f"https://cash-control-3vhg.onrender.com/reset-password?token={token}"
 
 """
 
