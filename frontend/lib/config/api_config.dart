@@ -1,8 +1,8 @@
 class ApiConfig {
 
   static const String baseUrl =
-      "http://10.0.9.132:8000";
+      "https://cash-control-3vhg.onrender.com";
 
   static const String appUrl =
-      "http://10.0.9.132:3000";
+      "https://cash-control-3vhg.onrender.com";
 }
