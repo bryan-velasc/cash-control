@@ -1,5 +1,4 @@
 from fastapi.middleware.cors import CORSMiddleware
-
 from fastapi import FastAPI
 
 from app.database.database import db
@@ -16,39 +15,30 @@ from app.routes.notification_routes import (
     router as notification_router
 )
 
-#from app.routes.goal_routes import (
-#    router as goal_router
-#)
+from app.routes.goal_routes import (
+    router as goal_router
+)
 
-#from app.routes.budget_routes import (
-#    router as budget_router
-#)
+# from app.routes.budget_routes import (
+#     router as budget_router
+# )
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-
     allow_origins=["*"],
-
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
 )
 
 app.include_router(auth_router)
-
 app.include_router(transaction_router)
-
 app.include_router(notification_router)
+app.include_router(goal_router)
 
-#app.include_router(budget_router)
-
-#app.include_router(goal_router)
-
-#app.include_router(notification_router)
+# app.include_router(budget_router)
 
 
 @app.get("/")
@@ -60,7 +50,6 @@ async def root():
 
 @app.get("/test-db")
 async def test_database():
-
     collections = await db.list_collection_names()
 
     return {
