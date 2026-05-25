@@ -47,4 +47,16 @@ class NotificationService {
       ),
     );
   }
+
+  static Future<int> getUnreadCount(
+  String email,
+) async {
+
+  final notifications =
+      await getNotifications(email);
+
+  return notifications
+      .where((item) => item["read"] == false)
+      .length;
+}
 }

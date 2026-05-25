@@ -56,31 +56,90 @@ async def create_transaction(
             .insert_one(new_transaction)
         )
 
+        # =========================
+        # NOTIFICACIÓN GASTO ALTO
+        # =========================
+
         if (
-    transaction.type == "expense"
-    and transaction.amount >= 1000
-):
+            transaction.type == "expense"
+            and transaction.amount >= 1000
+        ):
 
-    await notifications_collection.insert_one({
+            await notifications_collection.insert_one({
 
-        "user_email":
-            transaction.user_email,
+                "user_email":
+                    transaction.user_email,
 
-        "title":
-            "Gasto alto detectado",
+                "title":
+                    "Gasto alto detectado",
 
-        "message":
-            f"Registraste un gasto de ${transaction.amount} en {transaction.category}.",
+                "message":
+                    f"Registraste un gasto de ${transaction.amount} en {transaction.category}.",
 
-        "type":
-            "expense_alert",
+                "type":
+                    "expense_alert",
 
-        "read":
-            False,
+                "read":
+                    False,
 
-        "created_at":
-            transaction.created_at
-    })
+                "created_at":
+                    transaction.created_at
+            })
+
+        # =========================
+        # CALCULAR BALANCE
+        # =========================
+
+        transactions_cursor = (
+            transactions_collection.find({
+
+                "user_email":
+                    transaction.user_email
+            })
+        )
+
+        balance = 0
+
+        async for tx in transactions_cursor:
+
+            if tx["type"] == "income":
+
+                balance += tx["amount"]
+
+            elif tx["type"] == "expense":
+
+                balance -= tx["amount"]
+
+        # =========================
+        # BALANCE NEGATIVO
+        # =========================
+
+        if balance < 0:
+
+            await notifications_collection.insert_one({
+
+                "user_email":
+                    transaction.user_email,
+
+                "title":
+                    "Balance negativo",
+
+                "message":
+                    "Tu balance actual está por debajo de cero.",
+
+                "type":
+                    "negative_balance",
+
+                "read":
+                    False,
+
+                "created_at":
+                    transaction.created_at
+            })
+
+        # =========================
+        # ALERTA N8N
+        # =========================
 
         await send_n8n_alert({
 
@@ -106,7 +165,10 @@ async def create_transaction(
                 str(transaction.created_at),
 
             "transaction_id":
-                str(result.inserted_id)
+                str(result.inserted_id),
+
+            "balance":
+                balance
         })
 
         return {
@@ -115,7 +177,10 @@ async def create_transaction(
                 "Transaction created",
 
             "transaction_id":
-                str(result.inserted_id)
+                str(result.inserted_id),
+
+            "balance":
+                balance
         }
 
     except Exception as e:
