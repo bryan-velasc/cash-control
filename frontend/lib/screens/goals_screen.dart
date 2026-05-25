@@ -166,7 +166,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget buildGoalCard(dynamic goal) {
-    final String goalId = goal["id"];
+    final String goalId = goal["id"] ?? goal["_id"] ?? "";
     final String goalName = goal["goal_name"] ?? "Meta sin nombre";
 
     final double targetAmount =

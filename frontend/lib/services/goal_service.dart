@@ -5,15 +5,28 @@ class GoalService {
   static const String baseUrl =
       "https://cash-control-3vhg.onrender.com";
 
-  static Future<List> getGoals(String email) async {
+  static Future<List<dynamic>> getGoals(String email) async {
+    final encodedEmail = Uri.encodeComponent(email);
+
     final response = await http.get(
-      Uri.parse("$baseUrl/goals/$email"),
+      Uri.parse("$baseUrl/goals/$encodedEmail"),
     );
 
+    print("GET GOALS STATUS: ${response.statusCode}");
+    print("GET GOALS BODY: ${response.body}");
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is List) {
+        return decoded;
+      } else {
+        throw Exception("La respuesta no es una lista: $decoded");
+      }
     } else {
-      throw Exception("Error al obtener metas");
+      throw Exception(
+        "Error al cargar metas: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 
@@ -31,11 +44,20 @@ class GoalService {
         "user_email": email,
         "goal_name": goalName,
         "target_amount": targetAmount,
-        "current_amount": 0,
+        "current_amount": 0.0,
       }),
     );
 
-    return jsonDecode(response.body);
+    print("CREATE GOAL STATUS: ${response.statusCode}");
+    print("CREATE GOAL BODY: ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Error al crear meta: ${response.statusCode} - ${response.body}",
+      );
+    }
   }
 
   static Future addSaving(
@@ -52,7 +74,16 @@ class GoalService {
       }),
     );
 
-    return jsonDecode(response.body);
+    print("ADD SAVING STATUS: ${response.statusCode}");
+    print("ADD SAVING BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Error al agregar ahorro: ${response.statusCode} - ${response.body}",
+      );
+    }
   }
 
   static Future deleteGoal(String goalId) async {
@@ -60,7 +91,16 @@ class GoalService {
       Uri.parse("$baseUrl/goals/$goalId"),
     );
 
-    return jsonDecode(response.body);
+    print("DELETE GOAL STATUS: ${response.statusCode}");
+    print("DELETE GOAL BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Error al eliminar meta: ${response.statusCode} - ${response.body}",
+      );
+    }
   }
 
   static Future<Map<String, dynamic>> getGoalsSummary(

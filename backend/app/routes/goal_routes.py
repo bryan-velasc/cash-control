@@ -7,7 +7,7 @@ from app.models.goal_model import GoalCreate
 
 router = APIRouter()
 
-goals_collection = db["goals"]
+goals_collection = db["Objetivos"]
 
 
 @router.post("/goals/create")
