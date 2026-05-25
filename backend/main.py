@@ -12,6 +12,10 @@ from app.routes.transaction_routes import (
     router as transaction_router
 )
 
+from app.routes.notification_routes import (
+    router as notification_router
+)
+
 #from app.routes.goal_routes import (
 #    router as goal_router
 #)
@@ -38,9 +42,13 @@ app.include_router(auth_router)
 
 app.include_router(transaction_router)
 
+app.include_router(notification_router)
+
 #app.include_router(budget_router)
 
 #app.include_router(goal_router)
+
+#app.include_router(notification_router)
 
 
 @app.get("/")

@@ -14,6 +14,10 @@ from app.services.n8n_service import (
     send_n8n_alert
 )
 
+from app.routes.notification_routes import (
+    notifications_collection
+)
+
 router = APIRouter()
 
 transactions_collection = db["transactions"]
@@ -51,6 +55,32 @@ async def create_transaction(
             transactions_collection
             .insert_one(new_transaction)
         )
+
+        if (
+    transaction.type == "expense"
+    and transaction.amount >= 1000
+):
+
+    await notifications_collection.insert_one({
+
+        "user_email":
+            transaction.user_email,
+
+        "title":
+            "Gasto alto detectado",
+
+        "message":
+            f"Registraste un gasto de ${transaction.amount} en {transaction.category}.",
+
+        "type":
+            "expense_alert",
+
+        "read":
+            False,
+
+        "created_at":
+            transaction.created_at
+    })
 
         await send_n8n_alert({
 

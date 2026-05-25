@@ -24,6 +24,8 @@ import 'ocr_screen.dart';
 
 import 'budgets_screen.dart';
 
+import 'notifications_screen.dart';
+
 import '../widgets/balance_card.dart';
 
 import '../widgets/income_card.dart';
@@ -111,17 +113,25 @@ class _DashboardScreenState
 
     double current = 0;
 
-    for (int i = 0; i < transactions.length; i++) {
+    for (int i = 0;
+        i < transactions.length;
+        i++) {
 
-      final tx = transactions[i];
+      final tx =
+          transactions[i];
 
-      if (tx["type"] == "income") {
+      final amount =
+          (tx["amount"] as num)
+              .toDouble();
 
-        current += tx["amount"];
+      if (tx["type"] ==
+          "income") {
+
+        current += amount;
 
       } else {
 
-        current -= tx["amount"];
+        current -= amount;
       }
 
       spots.add(
@@ -174,20 +184,25 @@ class _DashboardScreenState
 
       for (var tx in txData) {
 
-        if (tx["type"] == "income") {
+        final amount =
+            (tx["amount"] as num)
+                .toDouble();
 
-          income += tx["amount"];
+        if (tx["type"] ==
+            "income") {
+
+          income += amount;
 
         } else {
 
-          expenses += tx["amount"];
+          expenses += amount;
         }
       }
 
       setState(() {
 
         balance =
-            balanceData["balance"]
+            (balanceData["balance"] as num)
                 .toDouble();
 
         transactions = txData;
@@ -236,11 +251,13 @@ class _DashboardScreenState
 
     return Scaffold(
 
-      backgroundColor: Colors.black,
+      backgroundColor:
+          Colors.black,
 
       appBar: AppBar(
 
-        backgroundColor: Colors.black,
+        backgroundColor:
+            Colors.black,
 
         title: const Text(
           "CASH-CONTROL",
@@ -249,6 +266,35 @@ class _DashboardScreenState
         actions: [
 
           IconButton(
+
+            tooltip:
+                "Notificaciones",
+
+            onPressed: () {
+
+              Navigator.push(
+
+                context,
+
+                MaterialPageRoute(
+
+                  builder: (_) =>
+                      NotificationsScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+            },
+
+            icon: const Icon(
+              Icons.notifications,
+            ),
+          ),
+
+          IconButton(
+
+            tooltip:
+                "Agregar movimiento",
 
             onPressed: () async {
 
@@ -275,6 +321,9 @@ class _DashboardScreenState
 
           IconButton(
 
+            tooltip:
+                "Metas",
+
             onPressed: () {
 
               Navigator.push(
@@ -298,6 +347,9 @@ class _DashboardScreenState
 
           IconButton(
 
+            tooltip:
+                "Exportar PDF",
+
             onPressed: () {
 
               PdfService.generateReport(
@@ -310,7 +362,8 @@ class _DashboardScreenState
 
                 expenses: expenses,
 
-                transactions: transactions,
+                transactions:
+                    transactions,
               );
             },
 
@@ -320,6 +373,9 @@ class _DashboardScreenState
           ),
 
           IconButton(
+
+            tooltip:
+                "Exportar Excel",
 
             onPressed: () {
 
@@ -333,7 +389,8 @@ class _DashboardScreenState
 
                 expenses: expenses,
 
-                transactions: transactions,
+                transactions:
+                    transactions,
               );
             },
 
@@ -343,6 +400,9 @@ class _DashboardScreenState
           ),
 
           IconButton(
+
+            tooltip:
+                "OCR",
 
             onPressed: () {
 
@@ -365,6 +425,9 @@ class _DashboardScreenState
 
           IconButton(
 
+            tooltip:
+                "Cambiar tema",
+
             onPressed: () {
 
               Provider.of<ThemeProvider>(
@@ -382,6 +445,9 @@ class _DashboardScreenState
           ),
 
           IconButton(
+
+            tooltip:
+                "Presupuestos",
 
             onPressed: () {
 
@@ -406,7 +472,11 @@ class _DashboardScreenState
 
           IconButton(
 
-            onPressed: logout,
+            tooltip:
+                "Cerrar sesión",
+
+            onPressed:
+                logout,
 
             icon: const Icon(
               Icons.logout,
@@ -427,12 +497,15 @@ class _DashboardScreenState
               child: Padding(
 
                 padding:
-                    const EdgeInsets.all(20),
+                    const EdgeInsets.all(
+                  20,
+                ),
 
                 child: Column(
 
                   crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      CrossAxisAlignment
+                          .start,
 
                   children: [
 
@@ -440,7 +513,9 @@ class _DashboardScreenState
                       balance: balance,
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(
+                      height: 30,
+                    ),
 
                     Row(
 
@@ -449,37 +524,50 @@ class _DashboardScreenState
                         Expanded(
 
                           child: IncomeCard(
-                            income: income,
+                            income:
+                                income,
                           ),
                         ),
 
-                        const SizedBox(width: 15),
+                        const SizedBox(
+                          width: 15,
+                        ),
 
                         Expanded(
 
                           child: ExpenseCard(
-                            expenses: expenses,
+                            expenses:
+                                expenses,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 30),
-
-                    AiAdviceWidget(
-                      advice: advice,
+                    const SizedBox(
+                      height: 30,
                     ),
 
-                    const SizedBox(height: 30),
+                    AiAdviceWidget(
+                      advice:
+                          advice,
+                    ),
+
+                    const SizedBox(
+                      height: 30,
+                    ),
 
                     PieChartWidget(
 
-                      income: income,
+                      income:
+                          income,
 
-                      expenses: expenses,
+                      expenses:
+                          expenses,
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(
+                      height: 30,
+                    ),
 
                     GlassCard(
 
@@ -488,7 +576,10 @@ class _DashboardScreenState
                       child: Padding(
 
                         padding:
-                            const EdgeInsets.all(20),
+                            const EdgeInsets
+                                .all(
+                          20,
+                        ),
 
                         child: Column(
 
@@ -498,35 +589,48 @@ class _DashboardScreenState
 
                               "Evolución Financiera",
 
-                              style: TextStyle(
+                              style:
+                                  TextStyle(
 
-                                fontSize: 20,
+                                fontSize:
+                                    20,
 
                                 fontWeight:
-                                    FontWeight.bold,
+                                    FontWeight
+                                        .bold,
 
-                                color: Colors.white,
+                                color:
+                                    Colors.white,
                               ),
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(
+                              height: 20,
+                            ),
 
                             Expanded(
 
-                              child: LineChart(
+                              child:
+                                  LineChart(
 
                                 LineChartData(
 
-                                  gridData: FlGridData(
-                                    show: false,
+                                  gridData:
+                                      FlGridData(
+                                    show:
+                                        false,
                                   ),
 
-                                  titlesData: FlTitlesData(
-                                    show: false,
+                                  titlesData:
+                                      FlTitlesData(
+                                    show:
+                                        false,
                                   ),
 
-                                  borderData: FlBorderData(
-                                    show: false,
+                                  borderData:
+                                      FlBorderData(
+                                    show:
+                                        false,
                                   ),
 
                                   lineBarsData: [
@@ -536,21 +640,27 @@ class _DashboardScreenState
                                       spots:
                                           generateChartData(),
 
-                                      isCurved: true,
+                                      isCurved:
+                                          true,
 
-                                      color: Colors.green,
+                                      color:
+                                          Colors.green,
 
-                                      barWidth: 4,
+                                      barWidth:
+                                          4,
 
-                                      dotData: FlDotData(
-                                        show: false,
+                                      dotData:
+                                          FlDotData(
+                                        show:
+                                            false,
                                       ),
 
                                       belowBarData:
                                           BarAreaData(
-                                        show: true,
+                                        show:
+                                            true,
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),
@@ -560,24 +670,33 @@ class _DashboardScreenState
                       ),
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(
+                      height: 30,
+                    ),
 
                     const Text(
 
                       "Movimientos",
 
                       style: TextStyle(
+
                         fontSize: 24,
+
                         fontWeight:
                             FontWeight.bold,
-                        color: Colors.white,
+
+                        color:
+                            Colors.white,
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(
+                      height: 20,
+                    ),
 
                     TransactionsWidget(
-                      transactions: transactions,
+                      transactions:
+                          transactions,
                     ),
                   ],
                 ),
