@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-
-from datetime import datetime
+from typing import Optional
 
 
 class GoalCreate(BaseModel):
@@ -11,6 +10,4 @@ class GoalCreate(BaseModel):
 
     target_amount: float
 
-    current_amount: float = 0
-
-    created_at: datetime = datetime.utcnow()
+    current_amount: Optional[float] = 0
