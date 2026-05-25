@@ -17,7 +17,7 @@ async def create_goal(goal: GoalCreate):
             "user_email": goal.user_email,
             "goal_name": goal.goal_name,
             "target_amount": float(goal.target_amount),
-            "current_amount": float(goal.current_amount),
+            "current_amount": float(goal.current_amount or 0),
             "completed": False,
             "created_at": datetime.utcnow().isoformat(),
         })
@@ -44,21 +44,28 @@ async def get_goals(user_email: str):
         goals = []
 
         async for goal in cursor:
-            goal["id"] = str(goal["_id"])
-            goal["_id"] = str(goal["_id"])
+            goal_id = str(goal["_id"])
 
             target = float(goal.get("target_amount", 0))
             current = float(goal.get("current_amount", 0))
 
             progress = (current / target) * 100 if target > 0 else 0
 
-            if progress >= 100:
+            if progress > 100:
                 progress = 100
 
-            goal["progress"] = progress
-            goal["remaining_amount"] = max(target - current, 0)
-
-            goals.append(goal)
+            goals.append({
+                "id": goal_id,
+                "_id": goal_id,
+                "user_email": goal.get("user_email", ""),
+                "goal_name": goal.get("goal_name", "Meta sin nombre"),
+                "target_amount": target,
+                "current_amount": current,
+                "completed": goal.get("completed", False),
+                "created_at": goal.get("created_at", ""),
+                "progress": progress,
+                "remaining_amount": max(target - current, 0),
+            })
 
         return goals
 
@@ -108,10 +115,16 @@ async def add_saving_to_goal(goal_id: str, data: dict):
             },
         )
 
+        progress = (new_amount / target_amount) * 100 if target_amount > 0 else 0
+
+        if progress > 100:
+            progress = 100
+
         return {
             "message": "Ahorro agregado",
             "current_amount": new_amount,
             "completed": completed,
+            "progress": progress,
         }
 
     except Exception as e:
@@ -141,7 +154,7 @@ async def update_goal(goal_id: str, data: dict):
                 detail="No hay datos para actualizar",
             )
 
-        await goals_collection.update_one(
+        result = await goals_collection.update_one(
             {
                 "_id": ObjectId(goal_id),
             },
@@ -149,6 +162,12 @@ async def update_goal(goal_id: str, data: dict):
                 "$set": update_data,
             },
         )
+
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Meta no encontrada",
+            )
 
         return {
             "message": "Meta actualizada",
