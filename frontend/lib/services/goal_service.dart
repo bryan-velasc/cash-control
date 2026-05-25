@@ -8,10 +8,13 @@ class GoalService {
   static Future<List<dynamic>> getGoals(String email) async {
     final encodedEmail = Uri.encodeComponent(email);
 
+    final url = "$baseUrl/goals/$encodedEmail";
+
     final response = await http.get(
-      Uri.parse("$baseUrl/goals/$encodedEmail"),
+      Uri.parse(url),
     );
 
+    print("URL GOALS: $url");
     print("GET GOALS STATUS: ${response.statusCode}");
     print("GET GOALS BODY: ${response.body}");
 
@@ -21,11 +24,11 @@ class GoalService {
       if (decoded is List) {
         return decoded;
       } else {
-        throw Exception("La respuesta no es una lista: $decoded");
+        throw Exception("Respuesta inesperada: $decoded");
       }
     } else {
       throw Exception(
-        "Error al cargar metas: ${response.statusCode} - ${response.body}",
+        "Error ${response.statusCode}: ${response.body}",
       );
     }
   }
@@ -35,8 +38,10 @@ class GoalService {
     String goalName,
     double targetAmount,
   ) async {
+    final url = "$baseUrl/goals/create";
+
     final response = await http.post(
-      Uri.parse("$baseUrl/goals/create"),
+      Uri.parse(url),
       headers: {
         "Content-Type": "application/json",
       },
@@ -48,6 +53,7 @@ class GoalService {
       }),
     );
 
+    print("CREATE GOAL URL: $url");
     print("CREATE GOAL STATUS: ${response.statusCode}");
     print("CREATE GOAL BODY: ${response.body}");
 
@@ -55,7 +61,7 @@ class GoalService {
       return jsonDecode(response.body);
     } else {
       throw Exception(
-        "Error al crear meta: ${response.statusCode} - ${response.body}",
+        "Error al crear meta ${response.statusCode}: ${response.body}",
       );
     }
   }
@@ -64,8 +70,10 @@ class GoalService {
     String goalId,
     double amount,
   ) async {
+    final url = "$baseUrl/goals/add-saving/$goalId";
+
     final response = await http.put(
-      Uri.parse("$baseUrl/goals/add-saving/$goalId"),
+      Uri.parse(url),
       headers: {
         "Content-Type": "application/json",
       },
@@ -74,6 +82,7 @@ class GoalService {
       }),
     );
 
+    print("ADD SAVING URL: $url");
     print("ADD SAVING STATUS: ${response.statusCode}");
     print("ADD SAVING BODY: ${response.body}");
 
@@ -81,16 +90,19 @@ class GoalService {
       return jsonDecode(response.body);
     } else {
       throw Exception(
-        "Error al agregar ahorro: ${response.statusCode} - ${response.body}",
+        "Error al agregar ahorro ${response.statusCode}: ${response.body}",
       );
     }
   }
 
   static Future deleteGoal(String goalId) async {
+    final url = "$baseUrl/goals/$goalId";
+
     final response = await http.delete(
-      Uri.parse("$baseUrl/goals/$goalId"),
+      Uri.parse(url),
     );
 
+    print("DELETE GOAL URL: $url");
     print("DELETE GOAL STATUS: ${response.statusCode}");
     print("DELETE GOAL BODY: ${response.body}");
 
@@ -98,7 +110,7 @@ class GoalService {
       return jsonDecode(response.body);
     } else {
       throw Exception(
-        "Error al eliminar meta: ${response.statusCode} - ${response.body}",
+        "Error al eliminar meta ${response.statusCode}: ${response.body}",
       );
     }
   }

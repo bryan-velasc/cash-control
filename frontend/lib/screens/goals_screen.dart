@@ -17,8 +17,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
   List goals = [];
   bool isLoading = true;
 
-  final TextEditingController goalNameController = TextEditingController();
-  final TextEditingController targetAmountController = TextEditingController();
+  final TextEditingController goalNameController =
+      TextEditingController();
+
+  final TextEditingController targetAmountController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -32,25 +35,34 @@ class _GoalsScreenState extends State<GoalsScreen> {
     });
 
     try {
-      final data = await GoalService.getGoals(widget.userEmail);
+      final data = await GoalService.getGoals(
+        widget.userEmail,
+      );
 
       setState(() {
         goals = data;
         isLoading = false;
       });
     } catch (e) {
+      print("ERROR LOAD GOALS:");
+      print(e);
+
       setState(() {
         isLoading = false;
       });
 
-      showMessage("Error al cargar metas");
+      showMessage(e.toString());
     }
   }
 
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -92,6 +104,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
           ElevatedButton(
             onPressed: () async {
               final goalName = goalNameController.text.trim();
+
               final targetAmount =
                   double.tryParse(targetAmountController.text) ?? 0;
 
@@ -100,15 +113,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 return;
               }
 
-              await GoalService.createGoal(
-                widget.userEmail,
-                goalName,
-                targetAmount,
-              );
+              try {
+                await GoalService.createGoal(
+                  widget.userEmail,
+                  goalName,
+                  targetAmount,
+                );
 
-              Navigator.pop(context);
-              loadGoals();
-              showMessage("Meta creada correctamente");
+                Navigator.pop(context);
+
+                await loadGoals();
+
+                showMessage("Meta creada correctamente");
+              } catch (e) {
+                print("ERROR CREATE GOAL:");
+                print(e);
+
+                showMessage(e.toString());
+              }
             },
             child: const Text("Guardar"),
           ),
@@ -118,7 +140,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void showAddSavingDialog(String goalId) {
-    final TextEditingController amountController = TextEditingController();
+    final TextEditingController amountController =
+        TextEditingController();
 
     showDialog(
       context: context,
@@ -139,18 +162,31 @@ class _GoalsScreenState extends State<GoalsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final amount = double.tryParse(amountController.text) ?? 0;
+              final amount =
+                  double.tryParse(amountController.text) ?? 0;
 
               if (amount <= 0) {
                 showMessage("Ingresa una cantidad válida");
                 return;
               }
 
-              await GoalService.addSaving(goalId, amount);
+              try {
+                await GoalService.addSaving(
+                  goalId,
+                  amount,
+                );
 
-              Navigator.pop(context);
-              loadGoals();
-              showMessage("Ahorro agregado correctamente");
+                Navigator.pop(context);
+
+                await loadGoals();
+
+                showMessage("Ahorro agregado correctamente");
+              } catch (e) {
+                print("ERROR ADD SAVING:");
+                print(e);
+
+                showMessage(e.toString());
+              }
             },
             child: const Text("Agregar"),
           ),
@@ -160,14 +196,31 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> deleteGoal(String goalId) async {
-    await GoalService.deleteGoal(goalId);
-    loadGoals();
-    showMessage("Meta eliminada");
+    if (goalId.isEmpty) {
+      showMessage("Error: ID de meta vacío");
+      return;
+    }
+
+    try {
+      await GoalService.deleteGoal(goalId);
+
+      await loadGoals();
+
+      showMessage("Meta eliminada");
+    } catch (e) {
+      print("ERROR DELETE GOAL:");
+      print(e);
+
+      showMessage(e.toString());
+    }
   }
 
   Widget buildGoalCard(dynamic goal) {
-    final String goalId = goal["id"] ?? goal["_id"] ?? "";
-    final String goalName = goal["goal_name"] ?? "Meta sin nombre";
+    final String goalId =
+        goal["id"]?.toString() ?? goal["_id"]?.toString() ?? "";
+
+    final String goalName =
+        goal["goal_name"]?.toString() ?? "Meta sin nombre";
 
     final double targetAmount =
         double.tryParse(goal["target_amount"].toString()) ?? 0;
@@ -175,12 +228,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
     final double savedAmount =
         double.tryParse(goal["current_amount"].toString()) ?? 0;
 
-    final double progress =
-        targetAmount > 0 ? (savedAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
+    final double progress = targetAmount > 0
+        ? (savedAmount / targetAmount).clamp(0.0, 1.0)
+        : 0.0;
 
     final double percentage = progress * 100;
 
-    final bool completed = targetAmount > 0 && savedAmount >= targetAmount;
+    final bool completed =
+        targetAmount > 0 && savedAmount >= targetAmount;
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -219,9 +274,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor:
+                      Colors.white.withOpacity(0.2),
                   child: Icon(
-                    completed ? Icons.check_circle : Icons.savings,
+                    completed
+                        ? Icons.check_circle
+                        : Icons.savings,
                     color: Colors.white,
                     size: 30,
                   ),
@@ -229,7 +287,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         goalName,
@@ -241,9 +300,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        completed ? "Meta completada" : "Meta en progreso",
+                        completed
+                            ? "Meta completada"
+                            : "Meta en progreso",
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color:
+                              Colors.white.withOpacity(0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -259,9 +321,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 28),
-
             Text(
               "Ahorrado",
               style: TextStyle(
@@ -269,9 +329,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 fontSize: 14,
               ),
             ),
-
             const SizedBox(height: 4),
-
             Text(
               "\$${savedAmount.toStringAsFixed(2)}",
               style: const TextStyle(
@@ -280,9 +338,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 10),
-
             Text(
               "Objetivo: \$${targetAmount.toStringAsFixed(2)}",
               style: TextStyle(
@@ -290,25 +346,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 fontSize: 15,
               ),
             ),
-
             const SizedBox(height: 20),
-
             ClipRRect(
               borderRadius: BorderRadius.circular(30),
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 14,
-                backgroundColor: Colors.white.withOpacity(0.2),
-                valueColor: const AlwaysStoppedAnimation<Color>(
+                backgroundColor:
+                    Colors.white.withOpacity(0.2),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(
                   Colors.white,
                 ),
               ),
             ),
-
             const SizedBox(height: 12),
-
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "${percentage.toStringAsFixed(1)}%",
@@ -328,13 +383,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 22),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: completed
+                onPressed: completed || goalId.isEmpty
                     ? null
                     : () {
                         showAddSavingDialog(goalId);
@@ -346,7 +399,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     vertical: 15,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius:
+                        BorderRadius.circular(18),
                   ),
                 ),
                 icon: const Icon(Icons.add),
