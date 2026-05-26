@@ -35,6 +35,10 @@ from app.routes.financial_health_routes import (
     router as financial_health_router
 )
 
+from app.routes.security_routes import (
+    router as security_router
+)
+
 app = FastAPI()
 
 app.add_middleware(
@@ -64,6 +68,8 @@ app.include_router(copilot_router)
 app.include_router(budget_router)
 
 app.include_router(financial_health_router)
+
+app.include_router(security_router)
 
 
 # =========================

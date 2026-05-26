@@ -18,6 +18,7 @@ import 'ocr_screen.dart';
 import 'budgets_screen.dart';
 import 'notifications_screen.dart';
 import 'copilot_screen.dart';
+import 'financial_health_screen.dart';
 
 import '../widgets/balance_card.dart';
 import '../widgets/income_card.dart';
@@ -192,22 +193,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.greenAccent.withOpacity(0.22),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.smart_toy,
-            color: Colors.black,
-            size: 42,
-          ),
+          const Icon(Icons.smart_toy, color: Colors.black, size: 42),
           const SizedBox(height: 14),
           const Text(
             "Cash-Control AI Copilot",
@@ -234,9 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CopilotScreen(
-                      email: widget.email,
-                    ),
+                    builder: (_) => CopilotScreen(email: widget.email),
                   ),
                 );
               },
@@ -245,10 +233,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.greenAccent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildFinancialHealthCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: LinearGradient(
+          colors: [
+            Colors.purpleAccent.withOpacity(0.95),
+            Colors.deepPurpleAccent.withOpacity(0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.health_and_safety, color: Colors.white, size: 42),
+          const SizedBox(height: 14),
+          const Text(
+            "Salud Financiera IA",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Consulta tu score, riesgo financiero y predicción de balance.",
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FinancialHealthScreen(
+                      email: widget.email,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_graph),
+              label: const Text("Ver salud financiera"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.deepPurple,
               ),
             ),
           ),
@@ -267,54 +315,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Colors.indigo.shade400,
             Colors.blue.shade700,
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(
-                  Icons.savings,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Text(
-                  "Resumen de Metas",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          const Text(
+            "Resumen de Metas",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 24),
           Text(
             "$totalGoals metas activas",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
-              fontSize: 18,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
           const SizedBox(height: 14),
           Text(
@@ -328,22 +345,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(
             "Objetivo: \$${totalGoalsTarget.toStringAsFixed(2)}",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: 22),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: (goalsProgress / 100).clamp(0.0, 1.0),
-              minHeight: 14,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Colors.white,
-              ),
-            ),
+          LinearProgressIndicator(
+            value: (goalsProgress / 100).clamp(0.0, 1.0),
+            minHeight: 14,
           ),
           const SizedBox(height: 12),
           Text(
@@ -362,29 +369,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => GoalsScreen(
-                      userEmail: widget.email,
-                    ),
+                    builder: (_) => GoalsScreen(userEmail: widget.email),
                   ),
                 );
 
                 loadGoalsSummary();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.indigo,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
               icon: const Icon(Icons.flag),
-              label: const Text(
-                "Ver metas",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              label: const Text("Ver metas"),
             ),
           ),
         ],
@@ -400,56 +392,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: Colors.black,
         title: const Text("CASH-CONTROL"),
         actions: [
-          Stack(
-            children: [
-              IconButton(
-                tooltip: "Notificaciones",
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => NotificationsScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-
-                  loadUnreadNotifications();
-                },
-                icon: const Icon(Icons.notifications),
-              ),
-              if (unreadNotifications > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      unreadNotifications.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+          IconButton(
+            tooltip: "Salud Financiera IA",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FinancialHealthScreen(email: widget.email),
                 ),
-            ],
+              );
+            },
+            icon: const Icon(Icons.health_and_safety),
           ),
+          IconButton(
+            tooltip: "AI Copilot",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CopilotScreen(email: widget.email),
+                ),
+              );
+            },
+            icon: const Icon(Icons.smart_toy),
+          ),
+          IconButton(
+            tooltip: "Notificaciones",
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NotificationsScreen(email: widget.email),
+                ),
+              );
 
+              loadUnreadNotifications();
+            },
+            icon: const Icon(Icons.notifications),
+          ),
           IconButton(
             tooltip: "Agregar movimiento",
             onPressed: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => AddTransactionScreen(
-                    email: widget.email,
-                  ),
+                  builder: (_) => AddTransactionScreen(email: widget.email),
                 ),
               );
 
@@ -457,16 +444,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             icon: const Icon(Icons.add),
           ),
-
           IconButton(
             tooltip: "Metas",
             onPressed: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => GoalsScreen(
-                    userEmail: widget.email,
-                  ),
+                  builder: (_) => GoalsScreen(userEmail: widget.email),
                 ),
               );
 
@@ -474,7 +458,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             icon: const Icon(Icons.flag),
           ),
+          IconButton(
+            tooltip: "OCR",
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OCRScreen(email: widget.email),
+                ),
+              );
 
+              if (result == true) {
+                refreshDashboard();
+              }
+            },
+            icon: const Icon(Icons.camera_alt),
+          ),
+          IconButton(
+            tooltip: "Presupuestos",
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BudgetsScreen(email: widget.email),
+                ),
+              );
+
+              refreshDashboard();
+            },
+            icon: const Icon(Icons.account_balance_wallet),
+          ),
           IconButton(
             tooltip: "Exportar PDF",
             onPressed: () {
@@ -488,7 +501,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             icon: const Icon(Icons.picture_as_pdf),
           ),
-
           IconButton(
             tooltip: "Exportar Excel",
             onPressed: () {
@@ -502,58 +514,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             icon: const Icon(Icons.table_chart),
           ),
-
-          IconButton(
-            tooltip: "OCR",
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => OCRScreen(
-                    email: widget.email,
-                  ),
-                ),
-              );
-
-              if (result == true) {
-                refreshDashboard();
-              }
-            },
-            icon: const Icon(Icons.camera_alt),
-          ),
-
-          IconButton(
-            tooltip: "Presupuestos",
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BudgetsScreen(
-                    email: widget.email,
-                  ),
-                ),
-              );
-
-              refreshDashboard();
-            },
-            icon: const Icon(Icons.account_balance_wallet),
-          ),
-
-          IconButton(
-            tooltip: "AI Copilot",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CopilotScreen(
-                    email: widget.email,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.smart_toy),
-          ),
-
           IconButton(
             tooltip: "Cambiar tema",
             onPressed: () {
@@ -564,7 +524,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             icon: const Icon(Icons.dark_mode),
           ),
-
           IconButton(
             tooltip: "Cerrar sesión",
             onPressed: logout,
@@ -573,9 +532,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: loading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: refreshDashboard,
               child: SingleChildScrollView(
@@ -586,42 +543,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BalanceCard(balance: balance),
-
                       const SizedBox(height: 30),
-
                       Row(
                         children: [
-                          Expanded(
-                            child: IncomeCard(income: income),
-                          ),
+                          Expanded(child: IncomeCard(income: income)),
                           const SizedBox(width: 15),
-                          Expanded(
-                            child: ExpenseCard(expenses: expenses),
-                          ),
+                          Expanded(child: ExpenseCard(expenses: expenses)),
                         ],
                       ),
-
                       const SizedBox(height: 30),
-
                       buildCopilotCard(),
-
                       const SizedBox(height: 30),
-
+                      buildFinancialHealthCard(),
+                      const SizedBox(height: 30),
                       buildGoalsSummaryCard(),
-
                       const SizedBox(height: 30),
-
                       AiAdviceWidget(advice: advice),
-
                       const SizedBox(height: 30),
-
-                      PieChartWidget(
-                        income: income,
-                        expenses: expenses,
-                      ),
-
+                      PieChartWidget(income: income, expenses: expenses),
                       const SizedBox(height: 30),
-
                       GlassCard(
                         height: 300,
                         child: Padding(
@@ -660,9 +600,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 30),
-
                       const Text(
                         "Movimientos",
                         style: TextStyle(
@@ -671,12 +609,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: Colors.white,
                         ),
                       ),
-
                       const SizedBox(height: 20),
-
-                      TransactionsWidget(
-                        transactions: transactions,
-                      ),
+                      TransactionsWidget(transactions: transactions),
                     ],
                   ),
                 ),
