@@ -1,4 +1,4 @@
-ffrom fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from app.database.database import db
 
