@@ -519,21 +519,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icons.table_chart,
             ),
           ),
+          
+IconButton(
+  tooltip: "OCR",
+  onPressed: () async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OCRScreen(
+          email: widget.email,
+        ),
+      ),
+    );
 
-          IconButton(
-            tooltip: "OCR",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const OCRScreen(),
-                ),
-              );
-            },
-            icon: const Icon(
-              Icons.camera_alt,
-            ),
-          ),
+    if (result == true) {
+      refreshDashboard();
+    }
+  },
+  icon: const Icon(
+    Icons.camera_alt,
+  ),
+),
 
           IconButton(
             tooltip: "Cambiar tema",
