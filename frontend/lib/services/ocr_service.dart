@@ -1,62 +1,32 @@
 import 'dart:convert';
-
-import 'dart:io';
-
-import 'package:http/http.dart'
-    as http;
+import 'package:http/http.dart' as http;
 
 class OCRService {
+  static const String baseUrl =
+      "https://cash-control-3vhg.onrender.com";
 
-  static Future<String>
-      scanReceipt(
-    File image,
+  static Future<Map<String, dynamic>> analyzeText(
+    String text,
   ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/ocr/analyze"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "text": text,
+      }),
+    );
 
-    try {
+    print("OCR ANALYZE STATUS: ${response.statusCode}");
+    print("OCR ANALYZE BODY: ${response.body}");
 
-      var request =
-          http.MultipartRequest(
-
-        'POST',
-
-        Uri.parse(
-          'https://api.ocr.space/parse/image',
-        ),
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Error OCR backend: ${response.statusCode} - ${response.body}",
       );
-
-      request.headers.addAll({
-
-        'apikey':
-            'helloworld',
-      });
-
-      request.files.add(
-
-        await http.MultipartFile
-            .fromPath(
-
-          'file',
-
-          image.path,
-        ),
-      );
-
-      final response =
-          await request.send();
-
-      final result =
-          await response.stream
-              .bytesToString();
-
-      final data =
-          jsonDecode(result);
-
-      return data["ParsedResults"][0]
-          ["ParsedText"];
-
-    } catch (e) {
-
-      return "Error OCR";
     }
   }
 }

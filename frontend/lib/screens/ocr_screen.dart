@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
+import '../services/ocr_service.dart';
 import '../services/transaction_service.dart';
 
 class OCRScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _OCRScreenState extends State<OCRScreen> {
   String? detectedStore;
   String? detectedDate;
   String detectedCategory = "Compras";
+  String detectedDescription = "OCR - Ticket detectado";
 
   Future<void> pickImageFromCamera() async {
     final XFile? image = await imagePicker.pickImage(
@@ -64,6 +66,7 @@ class _OCRScreenState extends State<OCRScreen> {
       detectedStore = null;
       detectedDate = null;
       detectedCategory = "Compras";
+      detectedDescription = "OCR - Ticket detectado";
     });
 
     try {
@@ -80,10 +83,38 @@ class _OCRScreenState extends State<OCRScreen> {
 
       final text = recognizedText.text;
 
-      final amount = extractAmount(text);
-      final store = extractStore(text);
-      final date = extractDate(text);
-      final category = detectCategory(text);
+      double? amount;
+      String? store;
+      String? date;
+      String category = "Compras";
+      String description = "OCR - Ticket detectado";
+
+      try {
+        final analyzed = await OCRService.analyzeText(text);
+
+        amount = analyzed["amount"] != null
+            ? double.tryParse(analyzed["amount"].toString())
+            : null;
+
+        store = analyzed["store"]?.toString();
+
+        date = analyzed["date"]?.toString();
+
+        category = analyzed["category"]?.toString() ?? "Compras";
+
+        description = analyzed["description"]?.toString() ??
+            "OCR - ${store ?? "Ticket detectado"}";
+      } catch (e) {
+        print("ERROR OCR BACKEND:");
+        print(e);
+
+        amount = extractAmount(text);
+        store = extractStore(text);
+        date = extractDate(text);
+        category = detectCategory(text);
+        description =
+            "OCR - ${store ?? "Ticket detectado"}${date != null ? " - $date" : ""}";
+      }
 
       setState(() {
         extractedText = text;
@@ -91,6 +122,7 @@ class _OCRScreenState extends State<OCRScreen> {
         detectedStore = store;
         detectedDate = date;
         detectedCategory = category;
+        detectedDescription = description;
         isProcessing = false;
       });
     } catch (e) {
@@ -209,15 +241,12 @@ class _OCRScreenState extends State<OCRScreen> {
     });
 
     try {
-      final description =
-          "OCR - ${detectedStore ?? "Ticket"}${detectedDate != null ? " - $detectedDate" : ""}";
-
       await TransactionService.createTransaction(
         email: widget.email,
         type: "expense",
         category: detectedCategory,
         amount: detectedAmount!,
-        description: description,
+        description: detectedDescription,
       );
 
       setState(() {
@@ -473,7 +502,9 @@ class _OCRScreenState extends State<OCRScreen> {
         child: Column(
           children: [
             buildImagePreview(),
+
             const SizedBox(height: 20),
+
             Row(
               children: [
                 Expanded(
@@ -493,7 +524,9 @@ class _OCRScreenState extends State<OCRScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 28),
+
             buildExtractedData(),
           ],
         ),
