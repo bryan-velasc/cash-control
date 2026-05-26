@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+ffrom fastapi import APIRouter, HTTPException
 
 from app.database.database import db
 
@@ -18,9 +18,12 @@ from app.routes.notification_routes import (
     notifications_collection
 )
 
+
 router = APIRouter()
 
 transactions_collection = db["transactions"]
+
+budgets_collection = db["budgets"]
 
 
 @router.post("/transactions/create")
@@ -55,6 +58,118 @@ async def create_transaction(
             transactions_collection
             .insert_one(new_transaction)
         )
+
+        # =========================
+        # ACTUALIZAR PRESUPUESTO
+        # =========================
+
+        if transaction.type == "expense":
+
+            budget = await budgets_collection.find_one({
+
+                "user_email":
+                    transaction.user_email,
+
+                "category":
+                    transaction.category
+            })
+
+            if budget:
+
+                current_spent = float(
+                    budget.get(
+                        "current_spent",
+                        0
+                    )
+                )
+
+                monthly_limit = float(
+                    budget.get(
+                        "monthly_limit",
+                        0
+                    )
+                )
+
+                new_spent = (
+                    current_spent +
+                    float(transaction.amount)
+                )
+
+                await budgets_collection.update_one(
+
+                    {
+                        "_id":
+                            budget["_id"]
+                    },
+
+                    {
+                        "$set": {
+
+                            "current_spent":
+                                new_spent
+                        }
+                    }
+                )
+
+                progress = (
+                    (new_spent / monthly_limit) * 100
+                    if monthly_limit > 0
+                    else 0
+                )
+
+                # =========================
+                # ALERTA PRESUPUESTO 80%
+                # =========================
+
+                if progress >= 80 and progress < 100:
+
+                    await notifications_collection.insert_one({
+
+                        "user_email":
+                            transaction.user_email,
+
+                        "title":
+                            "Presupuesto cerca del límite",
+
+                        "message":
+                            f"Has usado {round(progress, 1)}% de tu presupuesto de {transaction.category}.",
+
+                        "type":
+                            "budget_warning",
+
+                        "read":
+                            False,
+
+                        "created_at":
+                            transaction.created_at
+                    })
+
+                # =========================
+                # ALERTA PRESUPUESTO 100%
+                # =========================
+
+                if progress >= 100:
+
+                    await notifications_collection.insert_one({
+
+                        "user_email":
+                            transaction.user_email,
+
+                        "title":
+                            "Presupuesto superado",
+
+                        "message":
+                            f"Has superado tu presupuesto mensual de {transaction.category}.",
+
+                        "type":
+                            "budget_exceeded",
+
+                        "read":
+                            False,
+
+                        "created_at":
+                            transaction.created_at
+                    })
 
         # =========================
         # NOTIFICACIÓN GASTO ALTO
