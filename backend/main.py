@@ -23,6 +23,10 @@ from app.routes.ocr_routes import (
     router as ocr_router
 )
 
+from app.routes.copilot_routes import (
+    router as copilot_router
+)
+
 # from app.routes.budget_routes import (
 #     router as budget_router
 # )
@@ -42,6 +46,7 @@ app.include_router(transaction_router)
 app.include_router(notification_router)
 app.include_router(goal_router)
 app.include_router(ocr_router)
+app.include_router(copilot_router)
 
 # app.include_router(budget_router)
 
