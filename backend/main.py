@@ -27,9 +27,9 @@ from app.routes.copilot_routes import (
     router as copilot_router
 )
 
-# from app.routes.budget_routes import (
-#     router as budget_router
-# )
+from app.routes.budget_routes import (
+    router as budget_router
+)
 
 app = FastAPI()
 
@@ -41,15 +41,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =========================
+# ROUTERS
+# =========================
+
 app.include_router(auth_router)
+
 app.include_router(transaction_router)
+
 app.include_router(notification_router)
+
 app.include_router(goal_router)
+
 app.include_router(ocr_router)
+
 app.include_router(copilot_router)
 
-# app.include_router(budget_router)
+app.include_router(budget_router)
 
+
+# =========================
+# ROOT
+# =========================
 
 @app.get("/")
 async def root():
@@ -58,8 +71,13 @@ async def root():
     }
 
 
+# =========================
+# TEST DATABASE
+# =========================
+
 @app.get("/test-db")
 async def test_database():
+
     collections = await db.list_collection_names()
 
     return {
