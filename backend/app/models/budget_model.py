@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from typing import Optional
+
 
 class BudgetCreate(BaseModel):
 
@@ -6,4 +8,6 @@ class BudgetCreate(BaseModel):
 
     category: str
 
-    limit: float
+    monthly_limit: float
+
+    current_spent: Optional[float] = 0
