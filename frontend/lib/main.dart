@@ -11,53 +11,38 @@ import 'providers/theme_provider.dart';
 import 'screens/login_screen.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
-
-    options:
-        DefaultFirebaseOptions
-            .currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   runApp(
-
     ChangeNotifierProvider(
-
-      create: (_) =>
-          ThemeProvider(),
-
+      create: (_) => ThemeProvider(),
       child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-
-  const MyApp({super.key});
+  const MyApp({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-
     final themeProvider =
         Provider.of<ThemeProvider>(
       context,
     );
 
     return MaterialApp(
-
       debugShowCheckedModeBanner: false,
-
       title: "CASH-CONTROL",
-
-      themeMode:
-          themeProvider.themeMode,
-
+      themeMode: themeProvider.themeMode,
       darkTheme: ThemeData.dark(),
-
       theme: ThemeData.light(),
-
       home: const LoginScreen(),
     );
   }

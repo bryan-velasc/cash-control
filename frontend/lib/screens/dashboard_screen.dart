@@ -19,6 +19,7 @@ import 'budgets_screen.dart';
 import 'notifications_screen.dart';
 import 'copilot_screen.dart';
 import 'financial_health_screen.dart';
+import 'security_shield_screen.dart';
 
 import '../widgets/balance_card.dart';
 import '../widgets/income_card.dart';
@@ -68,7 +69,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadUnreadNotifications() async {
     try {
-      final count = await NotificationService.getUnreadCount(widget.email);
+      final count = await NotificationService.getUnreadCount(
+        widget.email,
+      );
+
       setState(() {
         unreadNotifications = count;
       });
@@ -80,7 +84,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadGoalsSummary() async {
     try {
-      final summary = await GoalService.getGoalsSummary(widget.email);
+      final summary = await GoalService.getGoalsSummary(
+        widget.email,
+      );
 
       setState(() {
         totalGoals = summary["total_goals"];
@@ -108,11 +114,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         current -= amount;
       }
 
-      spots.add(FlSpot(i.toDouble(), current));
+      spots.add(
+        FlSpot(
+          i.toDouble(),
+          current,
+        ),
+      );
     }
 
     if (spots.isEmpty) {
-      spots.add(const FlSpot(0, 0));
+      spots.add(
+        const FlSpot(
+          0,
+          0,
+        ),
+      );
     }
 
     return spots;
@@ -120,13 +136,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadData() async {
     try {
-      final balanceData = await TransactionService.getBalance(widget.email);
-      final txData = await TransactionService.getTransactions(widget.email);
+      final balanceData = await TransactionService.getBalance(
+        widget.email,
+      );
+
+      final txData = await TransactionService.getTransactions(
+        widget.email,
+      );
 
       List adviceData = [];
 
       try {
-        adviceData = await TransactionService.getFinancialAdvice(widget.email);
+        adviceData = await TransactionService.getFinancialAdvice(
+          widget.email,
+        );
       } catch (e) {
         print("ERROR IA:");
         print(e);
@@ -169,7 +192,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("user_email");
+
+    await prefs.remove(
+      "user_email",
+    );
 
     Navigator.pushReplacement(
       context,
@@ -197,8 +223,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.smart_toy, color: Colors.black, size: 42),
+          const Icon(
+            Icons.smart_toy,
+            color: Colors.black,
+            size: 42,
+          ),
+
           const SizedBox(height: 14),
+
           const Text(
             "Cash-Control AI Copilot",
             style: TextStyle(
@@ -207,7 +239,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 8),
+
           Text(
             "Pregunta sobre tus gastos, metas, presupuestos y balance.",
             style: TextStyle(
@@ -216,7 +250,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
+
           const SizedBox(height: 18),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -224,7 +260,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CopilotScreen(email: widget.email),
+                    builder: (_) => CopilotScreen(
+                      email: widget.email,
+                    ),
                   ),
                 );
               },
@@ -233,6 +271,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.greenAccent,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    18,
+                  ),
+                ),
               ),
             ),
           ),
@@ -259,8 +305,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.health_and_safety, color: Colors.white, size: 42),
+          const Icon(
+            Icons.health_and_safety,
+            color: Colors.white,
+            size: 42,
+          ),
+
           const SizedBox(height: 14),
+
           const Text(
             "Salud Financiera IA",
             style: TextStyle(
@@ -269,7 +321,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 8),
+
           Text(
             "Consulta tu score, riesgo financiero y predicción de balance.",
             style: TextStyle(
@@ -278,7 +332,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
+
           const SizedBox(height: 18),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -297,6 +353,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    18,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildSecurityShieldCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: LinearGradient(
+          colors: [
+            Colors.redAccent.withOpacity(0.95),
+            Colors.deepOrangeAccent.withOpacity(0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.redAccent.withOpacity(0.22),
+            blurRadius: 18,
+            offset: const Offset(
+              0,
+              8,
+            ),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.security,
+            color: Colors.white,
+            size: 42,
+          ),
+
+          const SizedBox(height: 14),
+
+          const Text(
+            "Security Shield",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            "Detecta phishing, fraude, SMS peligrosos y enlaces maliciosos.",
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SecurityShieldScreen(
+                      email: widget.email,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.shield),
+              label: const Text(
+                "Abrir Security Shield",
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    18,
+                  ),
+                ),
               ),
             ),
           ),
@@ -315,6 +473,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Colors.indigo.shade400,
             Colors.blue.shade700,
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
       child: Column(
@@ -328,12 +488,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 24),
+
           Text(
             "$totalGoals metas activas",
-            style: const TextStyle(color: Colors.white, fontSize: 18),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+            ),
           ),
+
           const SizedBox(height: 14),
+
           Text(
             "Ahorrado: \$${totalGoalsSaved.toStringAsFixed(2)}",
             style: const TextStyle(
@@ -342,17 +509,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 8),
+
           Text(
             "Objetivo: \$${totalGoalsTarget.toStringAsFixed(2)}",
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
           ),
+
           const SizedBox(height: 22),
-          LinearProgressIndicator(
-            value: (goalsProgress / 100).clamp(0.0, 1.0),
-            minHeight: 14,
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(
+              20,
+            ),
+            child: LinearProgressIndicator(
+              value: (goalsProgress / 100).clamp(
+                0.0,
+                1.0,
+              ),
+              minHeight: 14,
+              backgroundColor: Colors.white.withOpacity(
+                0.2,
+              ),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(
+                Colors.white,
+              ),
+            ),
           ),
+
           const SizedBox(height: 12),
+
           Text(
             "${goalsProgress.toStringAsFixed(1)}% completado",
             style: const TextStyle(
@@ -361,7 +552,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 17,
             ),
           ),
+
           const SizedBox(height: 18),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -369,7 +562,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => GoalsScreen(userEmail: widget.email),
+                    builder: (_) => GoalsScreen(
+                      userEmail: widget.email,
+                    ),
                   ),
                 );
 
@@ -377,6 +572,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
               icon: const Icon(Icons.flag),
               label: const Text("Ver metas"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.indigo,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    18,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -388,83 +595,155 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text("CASH-CONTROL"),
         actions: [
+          IconButton(
+            tooltip: "Security Shield",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SecurityShieldScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(
+              Icons.security,
+            ),
+          ),
+
           IconButton(
             tooltip: "Salud Financiera IA",
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => FinancialHealthScreen(email: widget.email),
+                  builder: (_) => FinancialHealthScreen(
+                    email: widget.email,
+                  ),
                 ),
               );
             },
-            icon: const Icon(Icons.health_and_safety),
+            icon: const Icon(
+              Icons.health_and_safety,
+            ),
           ),
+
           IconButton(
             tooltip: "AI Copilot",
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => CopilotScreen(email: widget.email),
+                  builder: (_) => CopilotScreen(
+                    email: widget.email,
+                  ),
                 ),
               );
             },
-            icon: const Icon(Icons.smart_toy),
+            icon: const Icon(
+              Icons.smart_toy,
+            ),
           ),
-          IconButton(
-            tooltip: "Notificaciones",
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => NotificationsScreen(email: widget.email),
-                ),
-              );
 
-              loadUnreadNotifications();
-            },
-            icon: const Icon(Icons.notifications),
+          Stack(
+            children: [
+              IconButton(
+                tooltip: "Notificaciones",
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NotificationsScreen(
+                        email: widget.email,
+                      ),
+                    ),
+                  );
+
+                  loadUnreadNotifications();
+                },
+                icon: const Icon(
+                  Icons.notifications,
+                ),
+              ),
+
+              if (unreadNotifications > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(
+                      5,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      unreadNotifications.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
+
           IconButton(
             tooltip: "Agregar movimiento",
             onPressed: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => AddTransactionScreen(email: widget.email),
+                  builder: (_) => AddTransactionScreen(
+                    email: widget.email,
+                  ),
                 ),
               );
 
               refreshDashboard();
             },
-            icon: const Icon(Icons.add),
+            icon: const Icon(
+              Icons.add,
+            ),
           ),
+
           IconButton(
             tooltip: "Metas",
             onPressed: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => GoalsScreen(userEmail: widget.email),
+                  builder: (_) => GoalsScreen(
+                    userEmail: widget.email,
+                  ),
                 ),
               );
 
               loadGoalsSummary();
             },
-            icon: const Icon(Icons.flag),
+            icon: const Icon(
+              Icons.flag,
+            ),
           ),
+
           IconButton(
             tooltip: "OCR",
             onPressed: () async {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => OCRScreen(email: widget.email),
+                  builder: (_) => OCRScreen(
+                    email: widget.email,
+                  ),
                 ),
               );
 
@@ -472,22 +751,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 refreshDashboard();
               }
             },
-            icon: const Icon(Icons.camera_alt),
+            icon: const Icon(
+              Icons.camera_alt,
+            ),
           ),
+
           IconButton(
             tooltip: "Presupuestos",
             onPressed: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => BudgetsScreen(email: widget.email),
+                  builder: (_) => BudgetsScreen(
+                    email: widget.email,
+                  ),
                 ),
               );
 
               refreshDashboard();
             },
-            icon: const Icon(Icons.account_balance_wallet),
+            icon: const Icon(
+              Icons.account_balance_wallet,
+            ),
           ),
+
           IconButton(
             tooltip: "Exportar PDF",
             onPressed: () {
@@ -499,8 +786,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 transactions: transactions,
               );
             },
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(
+              Icons.picture_as_pdf,
+            ),
           ),
+
           IconButton(
             tooltip: "Exportar Excel",
             onPressed: () {
@@ -512,8 +802,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 transactions: transactions,
               );
             },
-            icon: const Icon(Icons.table_chart),
+            icon: const Icon(
+              Icons.table_chart,
+            ),
           ),
+
           IconButton(
             tooltip: "Cambiar tema",
             onPressed: () {
@@ -522,75 +815,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 listen: false,
               ).toggleTheme();
             },
-            icon: const Icon(Icons.dark_mode),
+            icon: const Icon(
+              Icons.dark_mode,
+            ),
           ),
+
           IconButton(
             tooltip: "Cerrar sesión",
             onPressed: logout,
-            icon: const Icon(Icons.logout),
+            icon: const Icon(
+              Icons.logout,
+            ),
           ),
         ],
       ),
+
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : RefreshIndicator(
               onRefresh: refreshDashboard,
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics:
+                    const AlwaysScrollableScrollPhysics(),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(
+                    20,
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
-                      BalanceCard(balance: balance),
+                      BalanceCard(
+                        balance: balance,
+                      ),
+
                       const SizedBox(height: 30),
+
                       Row(
                         children: [
-                          Expanded(child: IncomeCard(income: income)),
+                          Expanded(
+                            child: IncomeCard(
+                              income: income,
+                            ),
+                          ),
+
                           const SizedBox(width: 15),
-                          Expanded(child: ExpenseCard(expenses: expenses)),
+
+                          Expanded(
+                            child: ExpenseCard(
+                              expenses: expenses,
+                            ),
+                          ),
                         ],
                       ),
+
                       const SizedBox(height: 30),
+
                       buildCopilotCard(),
+
                       const SizedBox(height: 30),
+
                       buildFinancialHealthCard(),
+
                       const SizedBox(height: 30),
+
+                      buildSecurityShieldCard(),
+
+                      const SizedBox(height: 30),
+
                       buildGoalsSummaryCard(),
+
                       const SizedBox(height: 30),
-                      AiAdviceWidget(advice: advice),
+
+                      AiAdviceWidget(
+                        advice: advice,
+                      ),
+
                       const SizedBox(height: 30),
-                      PieChartWidget(income: income, expenses: expenses),
+
+                      PieChartWidget(
+                        income: income,
+                        expenses: expenses,
+                      ),
+
                       const SizedBox(height: 30),
+
                       GlassCard(
                         height: 300,
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(
+                            20,
+                          ),
                           child: Column(
                             children: [
                               const Text(
                                 "Evolución Financiera",
                                 style: TextStyle(
                                   fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight:
+                                      FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
+
                               const SizedBox(height: 20),
+
                               Expanded(
                                 child: LineChart(
                                   LineChartData(
-                                    gridData: FlGridData(show: false),
-                                    titlesData: FlTitlesData(show: false),
-                                    borderData: FlBorderData(show: false),
+                                    gridData: FlGridData(
+                                      show: false,
+                                    ),
+                                    titlesData: FlTitlesData(
+                                      show: false,
+                                    ),
+                                    borderData: FlBorderData(
+                                      show: false,
+                                    ),
                                     lineBarsData: [
                                       LineChartBarData(
-                                        spots: generateChartData(),
+                                        spots:
+                                            generateChartData(),
                                         isCurved: true,
                                         color: Colors.green,
                                         barWidth: 4,
-                                        dotData: FlDotData(show: false),
-                                        belowBarData: BarAreaData(show: true),
+                                        dotData: FlDotData(
+                                          show: false,
+                                        ),
+                                        belowBarData:
+                                            BarAreaData(
+                                          show: true,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -600,7 +957,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 30),
+
                       const Text(
                         "Movimientos",
                         style: TextStyle(
@@ -609,8 +968,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: Colors.white,
                         ),
                       ),
+
                       const SizedBox(height: 20),
-                      TransactionsWidget(transactions: transactions),
+
+                      TransactionsWidget(
+                        transactions: transactions,
+                      ),
                     ],
                   ),
                 ),

@@ -13,6 +13,14 @@ class TransactionCreate(BaseModel):
 
     amount: float
 
-    description: Optional[str] = ""
+    description: str
 
-    created_at: Optional[datetime] = datetime.utcnow()
+    note: Optional[str] = ""
+
+    source_mode: Optional[str] = "general"
+
+    source_transaction_id: Optional[str] = None
+
+    source_transaction_name: Optional[str] = None
+
+    created_at: datetime = datetime.utcnow()
