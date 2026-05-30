@@ -676,6 +676,295 @@ async def get_chart_summary(
         )
 
 
+@router.get("/transactions/income-detail/{income_id}")
+async def get_income_detail(
+    income_id: str
+):
+
+    try:
+
+        income = await transactions_collection.find_one({
+            "_id":
+                ObjectId(income_id),
+
+            "type":
+                "income"
+        })
+
+        if not income:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Ingreso no encontrado"
+            )
+
+        income["_id"] = str(
+            income["_id"]
+        )
+
+        income_amount = float(
+            income.get(
+                "amount",
+                0
+            )
+        )
+
+        remaining_amount = float(
+            income.get(
+                "remaining_amount",
+                income_amount
+            )
+        )
+
+        used_amount = max(
+            income_amount - remaining_amount,
+            0
+        )
+
+        expenses_cursor = transactions_collection.find({
+            "type":
+                "expense",
+
+            "source_mode":
+                "linked_income",
+
+            "source_transaction_id":
+                income_id
+        })
+
+        linked_expenses = []
+
+        async for expense in expenses_cursor:
+
+            expense["_id"] = str(
+                expense["_id"]
+            )
+
+            linked_expenses.append(
+                expense
+            )
+
+        return {
+
+            "income":
+                income,
+
+            "summary":
+                {
+                    "amount":
+                        income_amount,
+
+                    "used_amount":
+                        used_amount,
+
+                    "remaining_amount":
+                        remaining_amount,
+
+                    "used_percentage":
+                        (
+                            (used_amount / income_amount) * 100
+                            if income_amount > 0
+                            else 0
+                        ),
+
+                    "remaining_percentage":
+                        (
+                            (remaining_amount / income_amount) * 100
+                            if income_amount > 0
+                            else 0
+                        )
+                },
+
+            "linked_expenses":
+                linked_expenses
+        }
+
+    except HTTPException as e:
+
+        raise e
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+@router.get("/transactions/money-flow/{user_email}")
+async def get_money_flow(
+    user_email: str
+):
+
+    try:
+
+        incomes_cursor = transactions_collection.find({
+            "user_email":
+                user_email,
+
+            "type":
+                "income"
+        })
+
+        flow = []
+
+        async for income in incomes_cursor:
+
+            income_id = str(
+                income["_id"]
+            )
+
+            income_amount = float(
+                income.get(
+                    "amount",
+                    0
+                )
+            )
+
+            remaining_amount = float(
+                income.get(
+                    "remaining_amount",
+                    income_amount
+                )
+            )
+
+            used_amount = max(
+                income_amount - remaining_amount,
+                0
+            )
+
+            expenses_cursor = transactions_collection.find({
+                "user_email":
+                    user_email,
+
+                "type":
+                    "expense",
+
+                "source_mode":
+                    "linked_income",
+
+                "source_transaction_id":
+                    income_id
+            })
+
+            linked_expenses = []
+
+            async for expense in expenses_cursor:
+
+                expense["_id"] = str(
+                    expense["_id"]
+                )
+
+                linked_expenses.append(
+                    expense
+                )
+
+            flow.append({
+
+                "income_id":
+                    income_id,
+
+                "description":
+                    income.get(
+                        "description",
+                        "Ingreso"
+                    ),
+
+                "category":
+                    income.get(
+                        "category",
+                        "Ingreso"
+                    ),
+
+                "amount":
+                    income_amount,
+
+                "used_amount":
+                    used_amount,
+
+                "remaining_amount":
+                    remaining_amount,
+
+                "used_percentage":
+                    (
+                        (used_amount / income_amount) * 100
+                        if income_amount > 0
+                        else 0
+                    ),
+
+                "linked_expenses":
+                    linked_expenses,
+
+                "created_at":
+                    income.get(
+                        "created_at",
+                        ""
+                    )
+            })
+
+        return {
+            "user_email":
+                user_email,
+
+            "flow":
+                flow
+        }
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+@router.get("/transactions/timeline/{user_email}")
+async def get_timeline(
+    user_email: str
+):
+
+    try:
+
+        cursor = transactions_collection.find({
+            "user_email":
+                user_email
+        })
+
+        transactions = []
+
+        async for tx in cursor:
+
+            tx["_id"] = str(
+                tx["_id"]
+            )
+
+            transactions.append(
+                tx
+            )
+
+        transactions.sort(
+            key=lambda x: str(
+                x.get(
+                    "created_at",
+                    ""
+                )
+            ),
+            reverse=True
+        )
+
+        return {
+            "timeline":
+                transactions
+        }
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
 @router.get("/financial-advice/{user_email}")
 async def financial_advice(
     user_email: str
