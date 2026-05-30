@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'package:provider/provider.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+
 import 'firebase_options.dart';
 
 import 'providers/theme_provider.dart';
@@ -15,6 +17,12 @@ Future<void> main() async {
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await Hive.initFlutter();
+
+  await Hive.openBox(
+    "cash_control_local",
   );
 
   runApp(

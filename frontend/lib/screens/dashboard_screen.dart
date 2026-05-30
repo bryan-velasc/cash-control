@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../services/transaction_service.dart';
 import '../services/pdf_service.dart';
 import '../services/excel_service.dart';
 import '../services/notification_service.dart';
 import '../services/goal_service.dart';
+import '../services/offline_sync_service.dart';
 
 import '../providers/theme_provider.dart';
 
@@ -20,6 +24,7 @@ import 'copilot_screen.dart';
 import 'financial_health_screen.dart';
 import 'security_shield_screen.dart';
 import 'money_flow_screen.dart';
+import 'timeline_screen.dart';
 
 import '../widgets/balance_card.dart';
 import '../widgets/income_card.dart';
@@ -60,12 +65,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Map<String, dynamic>? chartSummary;
 
+  StreamSubscription? connectivitySubscription;
+
+  bool isOnline = true;
+  bool syncing = false;
+  int pendingTransactions = 0;
+
   @override
   void initState() {
     super.initState();
+
     loadData();
     loadUnreadNotifications();
     loadGoalsSummary();
+    initConnectivityMonitor();
+  }
+
+  @override
+  void dispose() {
+    connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> initConnectivityMonitor() async {
+    final online = await OfflineSyncService.hasInternet();
+
+    setState(() {
+      isOnline = online;
+    });
+
+    await updatePendingCount();
+
+    if (online && pendingTransactions > 0) {
+      await syncOfflineData();
+    }
+
+    connectivitySubscription =
+        OfflineSyncService.connectivityStream().listen(
+      (event) async {
+        final hasInternet = event != ConnectivityResult.none;
+
+        setState(() {
+          isOnline = hasInternet;
+        });
+
+        if (hasInternet) {
+          await syncOfflineData();
+        }
+      },
+    );
+  }
+
+  Future<void> updatePendingCount() async {
+    final count = await OfflineSyncService.getPendingCount();
+
+    if (!mounted) return;
+
+    setState(() {
+      pendingTransactions = count;
+    });
+  }
+
+  Future<void> syncOfflineData() async {
+    final count = await OfflineSyncService.getPendingCount();
+
+    if (count == 0) {
+      await updatePendingCount();
+      return;
+    }
+
+    setState(() {
+      syncing = true;
+    });
+
+    final result = await OfflineSyncService.syncPending();
+
+    if (!mounted) return;
+
+    setState(() {
+      syncing = false;
+    });
+
+    await updatePendingCount();
+    await refreshDashboard();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result["message"].toString(),
+        ),
+      ),
+    );
   }
 
   Future<void> loadUnreadNotifications() async {
@@ -170,6 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await loadData();
     await loadUnreadNotifications();
     await loadGoalsSummary();
+    await updatePendingCount();
   }
 
   Future<void> logout() async {
@@ -183,6 +276,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => const LoginScreen(),
+      ),
+    );
+  }
+
+  Widget buildConnectionStatusCard() {
+    Color color;
+    String text;
+    IconData icon;
+
+    if (syncing) {
+      color = Colors.orangeAccent;
+      text = "Sincronizando";
+      icon = Icons.sync;
+    } else if (!isOnline) {
+      color = Colors.redAccent;
+      text = "Modo Offline";
+      icon = Icons.cloud_off;
+    } else {
+      color = Colors.greenAccent;
+      text = "Conectado";
+      icon = Icons.cloud_done;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: color.withOpacity(0.4),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: color,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (pendingTransactions > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.orangeAccent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                "$pendingTransactions pendientes",
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -203,16 +363,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.greenAccent.withOpacity(0.18),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Text(
             "Hola, $name",
@@ -232,25 +386,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              const Icon(
-                Icons.account_balance_wallet,
-                color: Colors.black,
-                size: 32,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "\$${balance.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            "\$${balance.toStringAsFixed(2)}",
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 34,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -259,169 +401,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.black.withOpacity(0.68),
               fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildQuickAccessCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151515),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Accesos rápidos",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Tus herramientas principales en un solo lugar.",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.55),
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 18),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.95,
-            children: [
-              buildQuickButton(
-                title: "Movimiento",
-                icon: Icons.add,
-                color: Colors.greenAccent,
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AddTransactionScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-
-                  if (result == true) {
-                    refreshDashboard();
-                  }
-                },
-              ),
-              buildQuickButton(
-                title: "OCR",
-                icon: Icons.camera_alt,
-                color: Colors.orangeAccent,
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => OCRScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-
-                  if (result == true) {
-                    refreshDashboard();
-                  }
-                },
-              ),
-              buildQuickButton(
-                title: "Metas",
-                icon: Icons.flag,
-                color: Colors.blueAccent,
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => GoalsScreen(
-                        userEmail: widget.email,
-                      ),
-                    ),
-                  );
-
-                  refreshDashboard();
-                },
-              ),
-              buildQuickButton(
-                title: "Presup.",
-                icon: Icons.account_balance_wallet,
-                color: Colors.purpleAccent,
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BudgetsScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-
-                  refreshDashboard();
-                },
-              ),
-              buildQuickButton(
-                title: "Flujo",
-                icon: Icons.account_tree,
-                color: Colors.greenAccent,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MoneyFlowScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              buildQuickButton(
-                title: "Shield",
-                icon: Icons.security,
-                color: Colors.redAccent,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SecurityShieldScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              buildQuickButton(
-                title: "IA",
-                icon: Icons.smart_toy,
-                color: Colors.tealAccent,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CopilotScreen(
-                        email: widget.email,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
           ),
         ],
       ),
@@ -447,7 +426,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment.center,
           children: [
             Icon(
               icon,
@@ -471,410 +451,153 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget buildCopilotCard() {
-    return buildPremiumActionCard(
-      title: "Cash-Control AI Copilot",
-      subtitle:
-          "Pregunta sobre tus gastos, metas, presupuestos y balance.",
-      icon: Icons.smart_toy,
-      colors: [
-        Colors.greenAccent.withOpacity(0.95),
-        Colors.tealAccent.withOpacity(0.85),
-      ],
-      iconColor: Colors.black,
-      textColor: Colors.black,
-      buttonText: "Abrir Copilot",
-      buttonIcon: Icons.chat,
-      buttonBackground: Colors.black,
-      buttonForeground: Colors.greenAccent,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CopilotScreen(
-              email: widget.email,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget buildFinancialHealthCard() {
-    return buildPremiumActionCard(
-      title: "Salud Financiera IA",
-      subtitle:
-          "Consulta tu score, riesgo financiero y predicción de balance.",
-      icon: Icons.health_and_safety,
-      colors: [
-        Colors.purpleAccent.withOpacity(0.95),
-        Colors.deepPurpleAccent.withOpacity(0.85),
-      ],
-      iconColor: Colors.white,
-      textColor: Colors.white,
-      buttonText: "Ver salud financiera",
-      buttonIcon: Icons.auto_graph,
-      buttonBackground: Colors.white,
-      buttonForeground: Colors.deepPurple,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => FinancialHealthScreen(
-              email: widget.email,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget buildSecurityShieldCard() {
-    return buildPremiumActionCard(
-      title: "Security Shield",
-      subtitle:
-          "Detecta phishing, fraude, SMS peligrosos y enlaces maliciosos.",
-      icon: Icons.security,
-      colors: [
-        Colors.redAccent.withOpacity(0.95),
-        Colors.deepOrangeAccent.withOpacity(0.85),
-      ],
-      iconColor: Colors.white,
-      textColor: Colors.white,
-      buttonText: "Abrir Security Shield",
-      buttonIcon: Icons.shield,
-      buttonBackground: Colors.white,
-      buttonForeground: Colors.redAccent,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SecurityShieldScreen(
-              email: widget.email,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget buildMoneyFlowCard() {
-    return buildPremiumActionCard(
-      title: "Análisis de Flujo de Dinero",
-      subtitle:
-          "Visualiza exactamente de dónde entró tu dinero, en qué se gastó y cuánto queda disponible.",
-      icon: Icons.account_tree,
-      colors: [
-        Colors.greenAccent.withOpacity(0.95),
-        Colors.tealAccent.withOpacity(0.85),
-      ],
-      iconColor: Colors.black,
-      textColor: Colors.black,
-      buttonText: "Abrir análisis",
-      buttonIcon: Icons.analytics,
-      buttonBackground: Colors.black,
-      buttonForeground: Colors.greenAccent,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MoneyFlowScreen(
-              email: widget.email,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget buildPremiumActionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> colors,
-    required Color iconColor,
-    required Color textColor,
-    required String buttonText,
-    required IconData buttonIcon,
-    required Color buttonBackground,
-    required Color buttonForeground,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            color: iconColor,
-            size: 42,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: textColor.withOpacity(0.85),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onTap,
-              icon: Icon(buttonIcon),
-              label: Text(buttonText),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonBackground,
-                foregroundColor: buttonForeground,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    18,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildGoalsSummaryCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(
-          colors: [
-            Colors.indigo.shade400,
-            Colors.blue.shade700,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Resumen de Metas",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            "$totalGoals metas activas",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            "Ahorrado: \$${totalGoalsSaved.toStringAsFixed(2)}",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Objetivo: \$${totalGoalsTarget.toStringAsFixed(2)}",
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 22),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(
-              20,
-            ),
-            child: LinearProgressIndicator(
-              value: (goalsProgress / 100).clamp(
-                0.0,
-                1.0,
-              ),
-              minHeight: 14,
-              backgroundColor: Colors.white.withOpacity(
-                0.2,
-              ),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(
-                Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "${goalsProgress.toStringAsFixed(1)}% completado",
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-            ),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GoalsScreen(
-                      userEmail: widget.email,
-                    ),
-                  ),
-                );
-
-                refreshDashboard();
-              },
-              icon: const Icon(Icons.flag),
-              label: const Text("Ver metas"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.indigo,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    18,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildExportCard() {
+  Widget buildQuickAccessCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: const Color(0xFF151515),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-        ),
+        borderRadius: BorderRadius.circular(30),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.95,
         children: [
-          const Text(
-            "Exportaciones",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Genera tus reportes financieros en PDF o Excel.",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.55),
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    PdfService.generateReport(
-                      email: widget.email,
-                      balance: balance,
-                      income: income,
-                      expenses: expenses,
-                      transactions: transactions,
-                    );
-                  },
-                  icon: const Icon(Icons.picture_as_pdf),
-                  label: const Text("PDF"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        16,
-                      ),
-                    ),
+          buildQuickButton(
+            title: "Movimiento",
+            icon: Icons.add,
+            color: Colors.greenAccent,
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddTransactionScreen(
+                    email: widget.email,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ExcelService.exportExcel(
-                      email: widget.email,
-                      balance: balance,
-                      income: income,
-                      expenses: expenses,
-                      transactions: transactions,
-                    );
-                  },
-                  icon: const Icon(Icons.table_chart),
-                  label: const Text("Excel"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        16,
-                      ),
-                    ),
+              );
+
+              if (result == true) {
+                refreshDashboard();
+              }
+            },
+          ),
+          buildQuickButton(
+            title: "Flujo",
+            icon: Icons.account_tree,
+            color: Colors.greenAccent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MoneyFlowScreen(
+                    email: widget.email,
                   ),
                 ),
-              ),
-            ],
+              );
+            },
+          ),
+          buildQuickButton(
+            title: "Timeline",
+            icon: Icons.timeline,
+            color: Colors.amberAccent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TimelineScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+            },
+          ),
+          buildQuickButton(
+            title: "OCR",
+            icon: Icons.camera_alt,
+            color: Colors.orangeAccent,
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OCRScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+
+              if (result == true) {
+                refreshDashboard();
+              }
+            },
+          ),
+          buildQuickButton(
+            title: "Metas",
+            icon: Icons.flag,
+            color: Colors.blueAccent,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GoalsScreen(
+                    userEmail: widget.email,
+                  ),
+                ),
+              );
+
+              refreshDashboard();
+            },
+          ),
+          buildQuickButton(
+            title: "Presup.",
+            icon: Icons.account_balance_wallet,
+            color: Colors.purpleAccent,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BudgetsScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+
+              refreshDashboard();
+            },
+          ),
+          buildQuickButton(
+            title: "Shield",
+            icon: Icons.security,
+            color: Colors.redAccent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SecurityShieldScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+            },
+          ),
+          buildQuickButton(
+            title: "IA",
+            icon: Icons.smart_toy,
+            color: Colors.tealAccent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CopilotScreen(
+                    email: widget.email,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -889,53 +612,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "CASH-CONTROL",
         style: TextStyle(
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.1,
         ),
       ),
       actions: [
-        Stack(
-          children: [
-            IconButton(
-              tooltip: "Notificaciones",
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => NotificationsScreen(
-                      email: widget.email,
-                    ),
-                  ),
-                );
-
-                loadUnreadNotifications();
-              },
-              icon: const Icon(
-                Icons.notifications,
-              ),
-            ),
-            if (unreadNotifications > 0)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(
-                    5,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    unreadNotifications.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+        IconButton(
+          tooltip: "Sincronizar",
+          onPressed: syncing ? null : syncOfflineData,
+          icon: Icon(
+            syncing ? Icons.sync : Icons.cloud_sync,
+          ),
+        ),
+        IconButton(
+          tooltip: "Notificaciones",
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => NotificationsScreen(
+                  email: widget.email,
                 ),
               ),
-          ],
+            );
+
+            loadUnreadNotifications();
+          },
+          icon: const Icon(Icons.notifications),
         ),
         PopupMenuButton<String>(
           color: const Color(0xFF151515),
@@ -953,41 +654,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
           },
           itemBuilder: (context) {
-            return [
-              const PopupMenuItem(
+            return const [
+              PopupMenuItem(
                 value: "theme",
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.dark_mode,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      "Cambiar tema",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  "Cambiar tema",
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: "logout",
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: Colors.redAccent,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      "Cerrar sesión",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  "Cerrar sesión",
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ];
@@ -997,102 +676,212 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget buildPremiumCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    List<Color> colors,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            color: Colors.black,
+            size: 42,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.black.withOpacity(0.75),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 18),
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: colors.first,
+            ),
+            child: const Text("Abrir"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildExportCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151515),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                PdfService.generateReport(
+                  email: widget.email,
+                  balance: balance,
+                  income: income,
+                  expenses: expenses,
+                  transactions: transactions,
+                );
+              },
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text("PDF"),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ExcelService.exportExcel(
+                  email: widget.email,
+                  balance: balance,
+                  income: income,
+                  expenses: expenses,
+                  transactions: transactions,
+                );
+              },
+              icon: const Icon(Icons.table_chart),
+              label: const Text("Excel"),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildGoalsSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        color: const Color(0xFF151515),
+      ),
+      child: Text(
+        "Metas activas: $totalGoals\nAhorrado: \$${totalGoalsSaved.toStringAsFixed(2)}\nObjetivo: \$${totalGoalsTarget.toStringAsFixed(2)}",
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 17,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: buildCleanAppBar(),
       body: loading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: refreshDashboard,
               child: SingleChildScrollView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(
-                    20,
-                  ),
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      buildWelcomeHeader(),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: IncomeCard(
-                              income: income,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    buildConnectionStatusCard(),
+                    const SizedBox(height: 18),
+                    buildWelcomeHeader(),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(child: IncomeCard(income: income)),
+                        const SizedBox(width: 15),
+                        Expanded(child: ExpenseCard(expenses: expenses)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    BalanceCard(balance: balance),
+                    const SizedBox(height: 30),
+                    buildQuickAccessCard(),
+                    const SizedBox(height: 30),
+                    if (chartSummary != null)
+                      FinancialPiesWidget(
+                        chartSummary: chartSummary!,
+                      ),
+                    const SizedBox(height: 30),
+                    buildPremiumCard(
+                      "Flujo de Dinero",
+                      "Audita de dónde entró y salió tu dinero.",
+                      Icons.account_tree,
+                      [
+                        Colors.greenAccent,
+                        Colors.tealAccent,
+                      ],
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MoneyFlowScreen(
+                              email: widget.email,
                             ),
                           ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: ExpenseCard(
-                              expenses: expenses,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 30),
+                    buildPremiumCard(
+                      "Timeline Financiero",
+                      "Consulta tus movimientos en orden cronológico.",
+                      Icons.timeline,
+                      [
+                        Colors.amberAccent,
+                        Colors.orangeAccent,
+                      ],
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TimelineScreen(
+                              email: widget.email,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      BalanceCard(
-                        balance: balance,
-                      ),
-                      const SizedBox(height: 30),
-                      buildQuickAccessCard(),
-                      const SizedBox(height: 30),
-                      if (chartSummary != null)
-                        FinancialPiesWidget(
-                          chartSummary: chartSummary!,
-                        )
-                      else
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(22),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF151515),
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                          child: Text(
-                            "No se pudo cargar el resumen de gráficas.",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.65),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 30),
-                      buildMoneyFlowCard(),
-                      const SizedBox(height: 30),
-                      buildCopilotCard(),
-                      const SizedBox(height: 30),
-                      buildFinancialHealthCard(),
-                      const SizedBox(height: 30),
-                      buildSecurityShieldCard(),
-                      const SizedBox(height: 30),
-                      buildGoalsSummaryCard(),
-                      const SizedBox(height: 30),
-                      AiAdviceWidget(
-                        advice: advice,
-                      ),
-                      const SizedBox(height: 30),
-                      buildExportCard(),
-                      const SizedBox(height: 30),
-                      const Text(
-                        "Movimientos",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      TransactionsWidget(
-                        transactions: transactions,
-                      ),
-                    ],
-                  ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 30),
+                    buildGoalsSummaryCard(),
+                    const SizedBox(height: 30),
+                    AiAdviceWidget(advice: advice),
+                    const SizedBox(height: 30),
+                    buildExportCard(),
+                    const SizedBox(height: 30),
+                    TransactionsWidget(
+                      transactions: transactions,
+                    ),
+                  ],
                 ),
               ),
             ),

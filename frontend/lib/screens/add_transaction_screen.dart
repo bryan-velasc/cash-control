@@ -170,7 +170,7 @@ class _AddTransactionScreenState
     });
 
     try {
-      await TransactionService.createTransaction(
+      final result = await TransactionService.createTransaction(
         email: widget.email,
         type: selectedType,
         category: selectedCategory,
@@ -186,8 +186,12 @@ class _AddTransactionScreenState
         loading = false;
       });
 
+      final isOffline = result["offline"] == true;
+
       showMessage(
-        "Movimiento guardado correctamente",
+        isOffline
+            ? "Movimiento guardado offline. Se sincronizará cuando tengas internet."
+            : "Movimiento guardado correctamente",
       );
 
       Navigator.pop(
@@ -263,9 +267,7 @@ class _AddTransactionScreenState
             ),
           ),
         ),
-
         const SizedBox(width: 12),
-
         Expanded(
           child: GestureDetector(
             onTap: () {
@@ -429,9 +431,7 @@ class _AddTransactionScreenState
             fontWeight: FontWeight.bold,
           ),
         ),
-
         const SizedBox(height: 12),
-
         Row(
           children: [
             Expanded(
@@ -474,9 +474,7 @@ class _AddTransactionScreenState
                 ),
               ),
             ),
-
             const SizedBox(width: 10),
-
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -520,9 +518,7 @@ class _AddTransactionScreenState
             ),
           ],
         ),
-
         const SizedBox(height: 14),
-
         if (sourceMode == "linked_income")
           buildIncomeSourceDropdown(),
       ],
